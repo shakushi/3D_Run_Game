@@ -1,0 +1,58 @@
+# build binary
+3drun_pc.app/
+3drun/
+
+# purchase Asstes
+Assets/BGM.meta
+Assets/BGM/
+Assets/FightingUnityChan_FreeAsset.meta
+Assets/FightingUnityChan_FreeAsset/
+Assets/Fantasy*Skybox*FREE.meta
+Assets/Fantasy*Skybox*FREE/
+Assets/Kevin*Iglesias.meta
+Assets/Kevin*Iglesias/
+Assets/TetraArts.meta
+Assets/TetraArts/
+
+# =============== #
+# Unity generated #
+# =============== #
+Temp/
+Obj/
+UnityGenerated/
+Library/
+
+# ===================================== #
+# Visual Studio / MonoDevelop generated #
+# ===================================== #
+ExportedObj/
+.vs/
+*.svd
+*.userprefs
+*.csproj
+*.pidb
+*.suo
+*.sln
+*.user
+*.unityproj
+*.booproj
+
+# ============ #
+# OS generated #
+# ============ #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+# ============ #
+# for others   #
+# ============ #
+
+*.log #log files, for some plugins
+*.pyc #python bytecode cache, for some plugins.
+sysinfo.txt #Unity3D Generated File On Crash Reports
