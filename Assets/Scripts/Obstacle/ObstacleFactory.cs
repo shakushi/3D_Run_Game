@@ -23,6 +23,7 @@ public class ObstacleFactory : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
+        Random.InitState(System.DateTime.Now.Millisecond);
         obstacle_wide = (GameObject)Resources.Load("Obstacle_wide");
         obstacle_cell = (GameObject)Resources.Load("Obstacle_cell");
         obstacle_tall = (GameObject)Resources.Load("Obstacle_tall");
@@ -69,7 +70,7 @@ public class ObstacleFactory : MonoBehaviour
     private Vector3 makeRandomInput()
     {
         //return notGoodRandam();
-        float x, y, z;
+        int x, y, z;
 
         x = Random.Range(1, 5);
         y = Random.Range(1, 5);
@@ -87,7 +88,6 @@ public class ObstacleFactory : MonoBehaviour
             y = 3;
         }
 
-        Random.InitState(System.DateTime.Now.Millisecond);
         Debug.Log("x=" + x + ", y=" + y + ", z=" + z);
         return new Vector3(x, y, z);
     }
@@ -173,48 +173,4 @@ public class ObstacleFactory : MonoBehaviour
         onCoolTime = false;
     }
 
-    private Vector3 notGoodRandam()
-    {
-        float x, y, z;
-        int rand = Random.Range(1, 11);
-        if (rand >= 7)
-        {
-            x = 2;
-        }
-        else if (rand >= 3)
-        {
-            x = 3;
-        }
-        else
-        {
-            x = 1;
-        }
-        rand = Random.Range(1, 11);
-        if (rand >= 7)
-        {
-            y = 2;
-        }
-        else if (rand >= 3)
-        {
-            y = 3;
-        }
-        else
-        {
-            y = 1;
-        }
-        rand = Random.Range(1, 11);
-        if (rand >= 7)
-        {
-            z = 2;
-        }
-        else if (rand >= 3)
-        {
-            z = 3;
-        }
-        else
-        {
-            z = 1;
-        }
-        return new Vector3(x,y,z);
-    }
 }

@@ -111,21 +111,6 @@ public class PlayerCtlr : MonoBehaviour
             animator.SetBool("IsGrounded", character.isGrounded);
             return;
         }
-        if (moveOrder != MoveOrderEnum.None)
-        {
-            if (moveOrder == MoveOrderEnum.Right && nowlane != 1)
-            {
-                character.Move(Vector3.right * 2f);
-                nowlane += 1;
-            }
-            else if(moveOrder == MoveOrderEnum.Left && nowlane != -1)
-            {
-                character.Move(Vector3.left * 2f);
-                nowlane += -1;
-            }
-            moveOrder = MoveOrderEnum.None;
-        }
-        Vector3 moveDirThisFrame = Vector3.zero;
         if (inDamage)
         {
             moveWithRotation(gravity);
@@ -133,6 +118,21 @@ public class PlayerCtlr : MonoBehaviour
             deinitFlags();
             return;
         }
+
+        if (moveOrder != MoveOrderEnum.None)
+        {
+            if (moveOrder == MoveOrderEnum.Right && nowlane != 1)
+            {
+                character.Move(Vector3.right * 2f);
+                nowlane += 1;
+            }
+            else if (moveOrder == MoveOrderEnum.Left && nowlane != -1)
+            {
+                character.Move(Vector3.left * 2f);
+                nowlane += -1;
+            }
+        }
+        Vector3 moveDirThisFrame = Vector3.zero;
         if (inAnimation)
         {
             moveWithRotation(screw);
@@ -190,6 +190,7 @@ public class PlayerCtlr : MonoBehaviour
         tmpFlagJump = false;
         tmpFlagMove = false;
         tmpFlagSliding = false;
+        moveOrder = MoveOrderEnum.None;
     }
     private Vector3 updateInertiaDir(Vector3 thisFrame, Vector3 old, bool isGrounded)
     {
