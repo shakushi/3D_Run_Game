@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class ObstacleFactory : MonoBehaviour
 {
+    [SerializeField]
+    public bool DisableForTest = false;
+
     private GameObject obstacle_wide;
     private GameObject obstacle_cell;
     private GameObject obstacle_tall;
@@ -17,7 +20,11 @@ public class ObstacleFactory : MonoBehaviour
 
     public bool Activate
     {
-        set { activate = value; }
+        set
+        {
+            activate = value;
+            if (DisableForTest) activate = false;
+        }
     }
 
     // Start is called before the first frame update

@@ -74,17 +74,17 @@ public class MainInputCtlr : MonoBehaviour
             else if(y < (Screen.height / 3f))
             {
                 Debug.Log("Buttom");
-                playerCtlr.IPOnButtonSlidingAct();
+                playerCtlr.IPOnButtonCrouchAct();
             }
             else if (x < (Screen.width * 2 / 5))
             {
                 Debug.Log("Left");
-                playerCtlr.IPMoveLane(MoveOrderEnum.Left);
+                playerCtlr.IPMoveLane(LaneMoveOrderEnum.Left);
             }
             else if (x > (Screen.width * 3 / 5))
             {
                 Debug.Log("Right");
-                playerCtlr.IPMoveLane(MoveOrderEnum.Right);
+                playerCtlr.IPMoveLane(LaneMoveOrderEnum.Right);
             }
         }
 #else   //タッチ入力
@@ -119,7 +119,7 @@ public class MainInputCtlr : MonoBehaviour
         Vector3 input = getMoveDir();
         if (input != Vector3.zero)
         {
-            playerCtlr.IPOnStickInput(input);
+            playerCtlr.IPMove(input);
         }
 
         /* Camera */

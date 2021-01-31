@@ -10,84 +10,79 @@ public class PlayerCtlr : MonoBehaviour
     private CharacterController character;
     private Animator animator;
     private CapsuleCollider upCollider;
-    private bool isPause = false;
-    private bool isClear = false;
 
-    private bool tmpFlagMove = false;
-    private float moveSpeed = 1f;
+    private PlayerStateEnum pstate = PlayerStateEnum.Pause;
+    private PlayerEventEnum pevent = PlayerEventEnum.None;
+
+    private const float moveSpeed = 6f;
+    private const float jumpFirstSpeed = 18f;
+    private const float jumpAcceleration = -5f;
+    private const float maxJumpHight = 2.0f;
+
     private Vector3 inputdir;
-    private Vector3 gravity = new Vector3(0, -0.6f, 0);
-    private Vector3 inertiaDir;
+    private float currentSpeedY;
 
-    private float jumpPower = 13f;
-    private bool tmpFlagJump = false;
-    private bool tmpFlagSliding = false;
+    private const float animationTime = 0.8f;
+    private const float damageTime = 1.2f;
 
-    private Vector3 screw = new Vector3(0, 0, 5.0f);
-    private bool inAnimation = false;
-    private float animationTime = 0.8f;
-
-    private bool inDamage = false;
-    private float damageTime = 1.2f;
-
-    private MoveOrderEnum moveOrder = MoveOrderEnum.None;
+    private LaneMoveOrderEnum laneOrder = LaneMoveOrderEnum.None;
     private int nowlane = 0;
+    private bool laneMoveEnable = true;
 
-    /* Property */
+    private bool isgrounded;
+    private int layerMask;
 
     /* IPlayerCtlr */
-    public bool IPCameraEnable
-    {
-        get { return !isPause; }
-    }
     public float IPSpeed
     {
         get { return character.velocity.magnitude; }
     }
-    public void IPlayerSetPause(bool value)
+    public void IPlayerGameStart()
     {
-        if (value && !isPause)
+        if (pevent != PlayerEventEnum.Clear)
         {
-            animator.SetInteger("Move", 0); //Idle
+            pevent = PlayerEventEnum.GameStart;
         }
-        isPause = value;
     }
     public void IPlayerGameClear()
     {
-        if (!isClear)
-        {
-            isClear = true;
-            animator.SetTrigger("Clear");
-        }
+        pevent = PlayerEventEnum.Clear;
     }
     public void IPOnButtonJumpAct()
     {
-        tmpFlagJump = true;
+        if (pevent != PlayerEventEnum.GameStart
+            || pevent != PlayerEventEnum.Damage
+            || pevent != PlayerEventEnum.Clear)
+        {
+            pevent = PlayerEventEnum.Jump;
+        }
     }
-    public void IPOnButtonSlidingAct()
+    public void IPOnButtonCrouchAct()
     {
-        tmpFlagSliding = true;
-    }
-    public void IPOnStickInput(Vector3 normalInput)
-    {
-        if (normalInput == null) { return; }
-
-        tmpFlagMove = true;
-        inputdir = normalInput;
+        if (pevent != PlayerEventEnum.GameStart
+            || pevent != PlayerEventEnum.Jump
+            || pevent != PlayerEventEnum.Damage
+            || pevent != PlayerEventEnum.Clear)
+        {
+            pevent = PlayerEventEnum.Crouch;
+        }
     }
     public void IPDamage()
     {
-        if (isClear || isPause)
+        if (pevent != PlayerEventEnum.GameStart
+            || pevent != PlayerEventEnum.Clear)
         {
-            return;
+            pevent = PlayerEventEnum.Damage;
         }
-        animator.SetTrigger("Damage");
-        inDamage = true;
-        StartCoroutine("endDamageManage");
     }
-    public void IPMoveLane(MoveOrderEnum order)
+    public void IPMove(Vector3 normalInput)
     {
-        moveOrder = order;
+        if (normalInput == null) { return; }
+        inputdir = normalInput;
+    }
+    public void IPMoveLane(LaneMoveOrderEnum order)
+    {
+        laneOrder = order;
     }
 
     /* MonoBehaviour */
@@ -96,125 +91,195 @@ public class PlayerCtlr : MonoBehaviour
         character = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         upCollider = GetComponent<CapsuleCollider>();
+        initFlags();
+        layerMask = LayerMask.GetMask(new string[] { "Field" });
     }
 
     private void Start()
     {
-        inertiaDir = Vector3.zero;
+        currentSpeedY = 0;
     }
 
     void Update()
     {
-        if (isClear || isPause)
-        {
-            moveWithRotation(gravity);
-            animator.SetBool("IsGrounded", character.isGrounded);
-            return;
-        }
-        if (inDamage)
-        {
-            moveWithRotation(gravity);
-            inertiaDir *= 0;
-            deinitFlags();
-            return;
-        }
+        Vector3 moveDirHolizontal = Vector3.zero;
+        Vector3 moveDirVertical = Vector3.zero;
 
-        if (moveOrder != MoveOrderEnum.None)
-        {
-            if (moveOrder == MoveOrderEnum.Right && nowlane != 1)
-            {
-                character.Move(Vector3.right * 2f);
-                nowlane += 1;
-            }
-            else if (moveOrder == MoveOrderEnum.Left && nowlane != -1)
-            {
-                character.Move(Vector3.left * 2f);
-                nowlane += -1;
-            }
-        }
-        Vector3 moveDirThisFrame = Vector3.zero;
-        if (inAnimation)
-        {
-            moveWithRotation(screw);
-            inertiaDir = updateInertiaDir(moveDirThisFrame, inertiaDir, true);
-            deinitFlags();
-            return;
-        }
-
-        bool isgrounded = character.isGrounded;
+        isgrounded = checkGrounded();
         animator.SetBool("IsGrounded", isgrounded);
+
         if (isgrounded)
         {
-            if (tmpFlagMove)
-            {
-                if (!tmpFlagJump && !tmpFlagSliding)
+            currentSpeedY = 0;
+        }
+
+        /* Update States */
+        switch (pevent)
+        {
+            case PlayerEventEnum.None:
+                if(pstate == PlayerStateEnum.Jump && isgrounded)
                 {
+                    pstate = PlayerStateEnum.Normal;
                     animator.SetInteger("Move", 1); //Run
                 }
-                moveDirThisFrame += inputdir;
-            }
-            if (tmpFlagJump)
-            {
-                animator.SetTrigger("Jump");
-                moveDirThisFrame += Vector3.up * 2.0f * jumpPower;
-            }
-            else if (tmpFlagSliding)
-            {
-                upColliderDisable();
-                animator.SetTrigger("ScrewKick");
-                inAnimation = true;
-                StartCoroutine("animationLifeManage");
-            }
-            if (!tmpFlagMove && !tmpFlagJump && !tmpFlagSliding)
-            {
-                animator.SetInteger("Move", 0); //Idle
-            }
+                break;
+            case PlayerEventEnum.GameStart:
+                if(pstate == PlayerStateEnum.Pause)
+                {
+                    pstate = PlayerStateEnum.Normal;
+                    animator.SetInteger("Move", 1); //Run
+                }
+                break;
+            case PlayerEventEnum.Jump:
+                if (pstate == PlayerStateEnum.Normal && isgrounded)
+                {
+                    pstate = PlayerStateEnum.Jump;
+                    animator.SetTrigger("Jump");
+                    /* Only when just start jumping */
+                    currentSpeedY = jumpFirstSpeed;
+                }
+                break;
+            case PlayerEventEnum.Crouch:
+                if (pstate == PlayerStateEnum.Normal)
+                {
+                    upColliderDisable();
+                    animator.SetTrigger("ScrewKick");
+                    pstate = PlayerStateEnum.Crouch;
+                    StartCoroutine("endCrouchManage");
+                }
+                break;
+            case PlayerEventEnum.Damage:
+                if (pstate == PlayerStateEnum.Normal
+                    || pstate == PlayerStateEnum.Jump
+                    || pstate == PlayerStateEnum.Crouch)
+                {
+                    pstate = PlayerStateEnum.Down;
+                    animator.SetTrigger("Damage");
+                    pstate = PlayerStateEnum.Down;
+                    StartCoroutine("endDamageManage");
+                }
+                break;
+            case PlayerEventEnum.Clear:
+                pstate = PlayerStateEnum.Clear;
+                animator.SetTrigger("Clear");
+                break;
+            default:
+                Debug.Log("Event Error : Unknown event occured");
+                break;
+        }
+
+        /* Move */
+        if (pstate == PlayerStateEnum.Clear
+            || pstate == PlayerStateEnum.Pause
+            || pstate == PlayerStateEnum.Down)
+        {
+            moveDirHolizontal *= 0;
+            moveDirVertical = -5.0f * Vector3.up;
         }
         else
         {
-            if (tmpFlagMove)
+            if (laneOrder != LaneMoveOrderEnum.None)
             {
-                moveDirThisFrame += inputdir;
+                laneMoveStart();
+            }
+            moveDirHolizontal += inputdir * moveSpeed;
+            if (!isgrounded)
+            {
+                currentSpeedY += jumpAcceleration * Time.deltaTime * 10f;
+                moveDirVertical = currentSpeedY * Vector3.up;
+            }
+            else if(pstate == PlayerStateEnum.Jump)
+            {
+                moveDirVertical = currentSpeedY * Vector3.up;
+            }
+            else
+            {
+                moveDirVertical = Vector3.zero;
             }
         }
 
-        moveWithRotation(moveDirThisFrame + gravity + inertiaDir);
+        /* 一定以上の高さに上がらせない */
+        if (transform.position.y > maxJumpHight)
+        {
+            moveDirVertical = -0.5f * Vector3.up;
+        }
+        moveWithRotation(moveDirHolizontal + moveDirVertical);
 
-        inertiaDir = updateInertiaDir(moveDirThisFrame, inertiaDir, isgrounded);
         deinitFlags();
     }
 
     /* private */
+    private bool checkGrounded()
+    {
+        if (character.isGrounded)
+        {
+            return true;
+        }
+        var ray = new Ray(this.transform.position + Vector3.up * 0.1f, Vector3.down);
+        var tolerance = 0.3f;
+        return Physics.Raycast(ray, tolerance, layerMask);
+    }
+    private void initFlags()
+    {
+        animator.SetInteger("Move", 0); //Idle
+
+        pevent = PlayerEventEnum.None;
+        laneOrder = LaneMoveOrderEnum.None;
+    }
     private void deinitFlags()
     {
-        tmpFlagJump = false;
-        tmpFlagMove = false;
-        tmpFlagSliding = false;
-        moveOrder = MoveOrderEnum.None;
+        pevent = PlayerEventEnum.None;
+        laneOrder = LaneMoveOrderEnum.None;
     }
-    private Vector3 updateInertiaDir(Vector3 thisFrame, Vector3 old, bool isGrounded)
+
+    private void laneMoveStart()
     {
-        if (isGrounded)
+        if (laneMoveEnable && laneOrder == LaneMoveOrderEnum.Right && nowlane != 1)
         {
-            return (old * 0.8f) + thisFrame;
+            nowlane += 1;
+            StartCoroutine(laneMoving(laneOrder));            
         }
-        else
+        else if (laneMoveEnable && laneOrder == LaneMoveOrderEnum.Left && nowlane != -1)
         {
-            return (old * 0.8f) + thisFrame + gravity;
+            nowlane += -1;
+            StartCoroutine(laneMoving(laneOrder));
+        }
+    }
+    private IEnumerator laneMoving(LaneMoveOrderEnum order)
+    {
+        laneMoveEnable = false;
+        float goalPosX = nowlane * 2f;
+        while (true)
+        {
+            if (Mathf.Abs(this.transform.position.x - goalPosX) < 0.2f)
+            {
+                this.transform.position = new Vector3(goalPosX, this.transform.position.y, this.transform.position.z);
+                laneMoveEnable = true;
+                yield break;
+            }
+            if(order == LaneMoveOrderEnum.Right)
+            {
+                character.Move(Vector3.right * 10f * Time.deltaTime);
+            }
+            else
+            {
+                character.Move(Vector3.left * 10f * Time.deltaTime);
+            }
+            yield return null;
         }
     }
 
-    private IEnumerator animationLifeManage()
-    {
-        yield return new WaitForSeconds(animationTime);
-        inAnimation = false;
-    }
     private IEnumerator endDamageManage()
     {
         yield return new WaitForSeconds(damageTime);
-        inDamage = false;
+        pstate = PlayerStateEnum.Normal;
     }
 
+    private IEnumerator endCrouchManage()
+    {
+        yield return new WaitForSeconds(animationTime);
+        pstate = PlayerStateEnum.Normal;
+    }
     private void upColliderDisable()
     {
         upCollider.enabled = false;
@@ -229,7 +294,7 @@ public class PlayerCtlr : MonoBehaviour
     private void moveWithRotation(Vector3 moveDirection)
     {
         Quaternion lookRotation;
-        character.Move(moveDirection * moveSpeed * Time.deltaTime);
+        character.Move(moveDirection * Time.deltaTime);
 
         lookRotation = Quaternion.LookRotation(moveDirection);
 

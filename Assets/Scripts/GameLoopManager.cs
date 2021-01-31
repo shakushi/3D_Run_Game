@@ -24,7 +24,6 @@ public class GameLoopManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        playerCtlr.IPlayerSetPause(true);
         factory.Activate = false;
     }
 
@@ -40,7 +39,7 @@ public class GameLoopManager : MonoBehaviour
     {
         inGame = true;
         startTime = Time.time;
-        playerCtlr.IPlayerSetPause(false);
+        playerCtlr.IPlayerGameStart();
         factory.Activate = true;
     }
 
